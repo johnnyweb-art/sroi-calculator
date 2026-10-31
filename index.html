@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SROI 社會投資報酬率計算平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:       #1a1a18;
+  --ink2:      #4a4a46;
+  --ink3:      #8a8a84;
+  --paper:     #f7f5f0;
+  --paper2:    #edeae3;
+  --paper3:    #e2dfd7;
+  --accent:    #1a5c3a;
+  --accent2:   #2d8c5e;
+  --accent3:   #e8f4ec;
+  --warn:      #8c4a1a;
+  --warn-bg:   #fdf0e6;
+  --red:       #c0392b;
+  --border:    rgba(26,26,24,0.12);
+  --border2:   rgba(26,26,24,0.22);
+  --radius:    6px;
+  --radius-lg: 12px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+  --mono:      'IBM Plex Mono', monospace;
+  --serif:     'Noto Serif TC', serif;
+  --sans:      'Noto Sans TC', sans-serif;
+  --transition: 0.18s ease;
+}
+
+html { font-size: 16px; }
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── Layout ── */
+.page-wrap {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--ink);
+  color: #f0ede6;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-logo .abbr {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 500;
+  color: #a8d4b8;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.sidebar-logo .full {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.5;
+}
+
+.sidebar-nav { padding: 16px 0; flex: 1; }
+.nav-group { margin-bottom: 8px; }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+  padding: 8px 24px 4px;
+  text-transform: uppercase;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 24px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all var(--transition);
+  border-left: 2px solid transparent;
+  position: relative;
+}
+.nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.nav-item.active {
+  color: #a8d4b8;
+  border-left-color: #a8d4b8;
+  background: rgba(168,212,184,0.08);
+}
+.nav-item .nav-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.nav-item .badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: rgba(168,212,184,0.15);
+  color: #a8d4b8;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  color: rgba(255,255,255,0.25);
+  line-height: 1.5;
+}
+.sidebar-footer a { color: rgba(168,212,184,0.6); text-decoration: none; }
+
+/* ── Main Content ── */
+.main {
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+.topbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0 36px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink3);
+  padding: 5px 12px;
+  background: var(--paper2);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.api-status:hover { border-color: var(--border2); }
+.api-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+.api-dot.ok { background: var(--accent2); }
+
+.content-area { padding: 36px; max-width: 860px; }
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Cards ── */
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--paper);
+  cursor: pointer;
+  user-select: none;
+}
+.card-header:hover { background: var(--paper2); }
+.step-num {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+.step-num.done { background: var(--accent); }
+.card-title { font-size: 14px; font-weight: 500; flex: 1; }
+.card-subtitle { font-size: 12px; color: var(--ink3); }
+.chevron {
+  font-size: 12px;
+  color: var(--ink3);
+  transition: transform var(--transition);
+}
+.chevron.open { transform: rotate(180deg); }
+.card-body { padding: 24px; display: none; }
+.card-body.open { display: block; }
+
+/* ── Form Elements ── */
+.form-row { margin-bottom: 16px; }
+.form-row:last-child { margin-bottom: 0; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink2);
+  margin-bottom: 6px;
+  letter-spacing: 0.2px;
+}
+.form-label .req { color: var(--red); margin-left: 2px; }
+.form-label .note {
+  font-weight: 400;
+  color: var(--ink3);
+  margin-left: 6px;
+  font-size: 11px;
+}
+input[type=text], input[type=number], select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26,92,58,0.10);
+  background: #fff;
+}
+input[type=number] { font-family: var(--mono); }
+textarea { resize: vertical; line-height: 1.6; }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%238a8a84' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.form-hint { font-size: 11px; color: var(--ink3); margin-top: 4px; line-height: 1.5; }
+
+/* ── Alert Boxes ── */
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.alert-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(140,74,26,0.2); }
+.alert-info { background: var(--accent3); color: var(--accent); border: 1px solid rgba(26,92,58,0.2); }
+.alert-icon { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Stakeholder Blocks ── */
+.sh-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--paper);
+  position: relative;
+}
+.sh-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.sh-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--ink);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.sh-block-title { font-size: 13px; font-weight: 500; flex: 1; }
+.sh-remove {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.sh-remove:hover { border-color: var(--red); color: var(--red); background: #fff5f5; }
+.add-sh-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink3);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 4px;
+}
+.add-sh-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent3); }
+
+/* ── Buttons ── */
+.btn {
+  padding: 9px 20px;
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #2d2d2a; }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover:not(:disabled) { background: #2d8c5e; }
+.btn-outline {
+  background: #fff;
+  color: var(--ink2);
+  border: 1px solid var(--border2);
+}
+.btn-outline:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); background: var(--paper); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+/* ── Progress ── */
+.progress-track {
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Result Box ── */
+.result-box {
+  background: var(--ink);
+  color: #f0ede6;
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  display: none;
+}
+.result-box.show { display: block; }
+.result-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.result-ratio {
+  font-family: var(--mono);
+  font-size: 48px;
+  font-weight: 500;
+  color: #a8d4b8;
+  line-height: 1;
+}
+.result-label { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 6px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+.kpi-v {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: #a8d4b8;
+}
+.kpi-k { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+.result-interp {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.7;
+}
+
+/* ── Report Box ── */
+.report-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: none;
+}
+.report-box.show { display: block; }
+.report-header {
+  padding: 14px 20px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.report-header-left { display: flex; align-items: center; gap: 10px; }
+.report-filename {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink2);
+}
+.streaming-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent2);
+  animation: pulse 1s ease-in-out infinite;
+  display: none;
+}
+.streaming-dot.active { display: inline-block; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.report-body {
+  padding: 24px 28px;
+  font-size: 13px;
+  line-height: 1.85;
+  max-height: 520px;
+  overflow-y: auto;
+  color: var(--ink2);
+  white-space: pre-wrap;
+  font-family: var(--serif);
+}
+
+/* ── API Config Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.modal p {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.modal .code-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  color: var(--ink2);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+.modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* ── Method Panel ── */
+.method-qa {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.method-qa textarea { min-height: 80px; }
+
+/* ── Checklist ── */
+.checklist { margin-top: 16px; }
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.check-item:last-child { border: none; }
+.check-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-family: var(--mono);
+}
+.ci-ok { background: var(--accent3); color: var(--accent); }
+.ci-warn { background: var(--warn-bg); color: var(--warn); }
+.ci-na { background: var(--paper2); color: var(--ink3); }
+
+/* ── Total display ── */
+.total-display {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink2);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-top: 4px;
+}
+.total-display .big { font-size: 18px; color: var(--ink); font-weight: 500; }
+
+/* ── About Panel ── */
+.about-section { max-width: 640px; }
+.about-section h2 {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+.about-section p {
+  font-size: 14px;
+  color: var(--ink2);
+  line-height: 1.8;
+  margin-bottom: 14px;
+}
+.principle-list { margin: 16px 0; }
+.principle-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.p-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--ink);
+  color: #fff;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.p-content .p-en { font-size: 12px; font-weight: 500; color: var(--ink); }
+.p-content .p-zh { font-size: 12px; color: var(--ink2); margin-top: 2px; line-height: 1.5; }
+.ref-list {
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.8;
+  font-family: var(--serif);
+}
+.ref-list li { margin-bottom: 8px; list-style: none; padding-left: 20px; position: relative; }
+.ref-list li::before {
+  content: counter(ref);
+  counter-increment: ref;
+  position: absolute;
+  left: 0;
+  font-family: var(--mono);
+  color: var(--ink3);
+  font-size: 11px;
+}
+.ref-list { counter-reset: ref; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .page-wrap { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .content-area { padding: 20px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- API Config Modal -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <h3>設定 Anthropic API Key</h3>
+    <p>輸入你的 API Key 以啟用 AI 報告書生成功能。Key 儲存在瀏覽器本地，不會傳送至任何第三方伺服器。</p>
+    <div class="code-note">取得 API Key：https://console.anthropic.com/settings/keys</div>
+    <div class="form-row">
+      <label class="form-label">API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveApiKey()">儲存並啟用</button>
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="abbr">SROI</div>
+      <div class="full">Social Return on Investment<br>社會投資報酬率計算平台</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">計算工具</div>
+        <div class="nav-item active" onclick="showPanel('calcA')" id="nav-calcA">
+          <span class="nav-icon">◎</span> 模式 A：精算 SROI
+          <span class="badge">評估</span>
+        </div>
+        <div class="nav-item" onclick="showPanel('calcB')" id="nav-calcB">
+          <span class="nav-icon">◈</span> 模式 B：規劃預測
+          <span class="badge">預測</span>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">知識庫</div>
+        <div class="nav-item" onclick="showPanel('method')" id="nav-method">
+          <span class="nav-icon">?</span> 方法論問答
+        </div>
+        <div class="nav-item" onclick="showPanel('about')" id="nav-about">
+          <span class="nav-icon">≡</span> 關於 SROI 準則
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      依據 Social Value International<br>
+      八大原則（2012建立，2021更新）<br><br>
+      <a href="https://www.socialvalueint.org" target="_blank">socialvalueint.org ↗</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">模式 A：事後評估 SROI 計算</div>
+      <div class="topbar-right">
+        <div class="api-status" onclick="openModal()" id="apiStatus">
+          <div class="api-dot" id="apiDot"></div>
+          <span id="apiStatusText">API Key 未設定</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- ─────────────── PANEL A ─────────────── -->
+      <div class="panel active" id="panel-calcA">
+
+        <!-- Step 1 -->
+        <div class="card" id="card1">
+          <div class="card-header" onclick="toggleCard('card1')">
+            <div class="step-num" id="sn1">1</div>
+            <div>
+              <div class="card-title">基本資訊與計畫範疇</div>
+              <div class="card-subtitle">計畫名稱、評估類型、期間、目標</div>
+            </div>
+            <div class="chevron open" id="cv1">▾</div>
+          </div>
+          <div class="card-body open" id="cb1">
+            <div class="form-row">
+              <label class="form-label">計畫 / 活動名稱 <span class="req">*</span></label>
+              <input type="text" id="projName" placeholder="例：偏鄉青年數位培力計畫 2024">
+            </div>
+            <div class="grid-2">
+              <div class="form-row">
+                <label class="form-label">執行單位</label>
+                <input type="text" id="orgName" placeholder="組織全名">
+              </div>
+              <div class="form-row">
+                <label class="form-label">評估類型 <span class="req">*</span></label>
+                <select id="evalType">
+                  <option value="evaluative">事後評估 (Evaluative SROI)</option>
+                  <option value="forecast">預測評估 (Forecast SROI)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-row">
+                <label class="form-label">評估起始 <span class="req">*</span></label>
+                <input type="text" id="dateStart" placeholder="2024/01">
+              </div>
+              <div class="form-row">
+                <label class="form-label">評估迄止 <span class="req">*</span></label>
+                <input type="text" id="dateEnd" placeholder="2024/12">
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">計畫目標與社會問題說明 <span class="req">*</span></label>
+              <textarea id="projDesc" rows="3" placeholder="此計畫旨在解決什麼社會問題？服務對象為何？地理範圍？"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="card" id="card2">
+          <div class="card-header" onclick="toggleCard('card2')">
+            <div class="step-num" id="sn2">2</div>
+            <div>
+              <div class="card-title">投入分析 (Inputs)</div>
+              <div class="card-subtitle">現金投入、非現金投入、計算年數</div>
+            </div>
+            <div class="chevron" id="cv2">▾</div>
+          </div>
+          <div class="card-body" id="cb2">
+            <div class="grid-2">
+              <div class="form-row">
+                <label class="form-label">現金投入總額（元）<span class="req">*</span></label>
+                <input type="number" id="cashIn" placeholder="0" oninput="updateTotal()">
+                <div class="form-hint">新台幣，所有資金來源合計</div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">非現金投入估值（元）</label>
+                <input type="number" id="inkindIn" placeholder="0" oninput="updateTotal()">
+                <div class="form-hint">志工時間 × 時薪、捐贈物資等</div>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="form-row">
+                <label class="form-label">持續性成果預設年期<span class="note">1–10 年，新增利害關係人時帶入</span></label>
+                <input type="number" id="calcYears" value="3" min="1" max="10">
+              </div>
+              <div class="form-row">
+                <label class="form-label">折現率（%）<span class="note">建議 3.5%</span></label>
+                <input type="number" id="discRate" value="3.5" step="0.5" oninput="updateTotal()">
+              </div>
+              <div class="form-row">
+                <label class="form-label">資金來源比例</label>
+                <input type="text" id="fundRatio" placeholder="政府60%、企業30%、自籌10%">
+              </div>
+            </div>
+            <div class="total-display" id="totalDisplay">投入總額：尚未填寫</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="card" id="card3">
+          <div class="card-header" onclick="toggleCard('card3')">
+            <div class="step-num" id="sn3">3</div>
+            <div>
+              <div class="card-title">利害關係人與成果 (Stakeholders & Outcomes)</div>
+              <div class="card-subtitle">每位利害關係人的成果鏈與財務代理值</div>
+            </div>
+            <div class="chevron" id="cv3">▾</div>
+          </div>
+          <div class="card-body" id="cb3">
+            <div class="alert alert-info">
+              <span class="alert-icon">ℹ</span>
+              <span>依據 P4 重大性原則，僅納入對利害關係人決策有真正影響的成果。財務代理值務必提供可查核之文獻來源。</span>
+            </div>
+            <div id="shContainer"></div>
+            <button class="add-sh-btn" onclick="addSH()">＋ 新增利害關係人</button>
+            <button class="add-sh-btn" onclick="loadExample()">載入教學範例：山林水 × 春燕生態農場（保守版）</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="card" id="card4">
+          <div class="card-header" onclick="toggleCard('card4')">
+            <div class="step-num" id="sn4">4</div>
+            <div>
+              <div class="card-title">調整因子設定 (Adjustment Factors)</div>
+              <div class="card-subtitle">無謂損失、歸因、替代效應、衰退率</div>
+            </div>
+            <div class="chevron" id="cv4">▾</div>
+          </div>
+          <div class="card-body" id="cb4">
+            <div class="alert alert-warn">
+              <span class="alert-icon">⚠</span>
+              <span>以下為「預設值」，新增利害關係人時自動帶入，可在步驟 3 逐一修改。依據 P5 不過度主張原則，四項因子均必須填寫。</span>
+            </div>
+            <div class="grid-2">
+              <div class="form-row">
+                <label class="form-label">無謂損失率 Deadweight（%）<span class="req">*</span></label>
+                <input type="number" id="deadweight" value="20" min="0" max="100">
+                <div class="form-hint">即使無本方案，成果仍會發生的比例</div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">歸因比例 Attribution（%）<span class="req">*</span></label>
+                <input type="number" id="attribution" value="80" min="0" max="100">
+                <div class="form-hint">成果可歸功於本方案的比例</div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">替代效應 Displacement（%）</label>
+                <input type="number" id="displacement" value="0" min="0" max="100">
+                <div class="form-hint">正效益排擠其他效益的比例</div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">衰退率 Drop-off（%/年）<span class="req">*</span></label>
+                <input type="number" id="dropoff" value="10" min="0" max="100">
+                <div class="form-hint">成果效益每年遞減比例</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">特殊情境備注 <span class="note">選填</span></label>
+              <textarea id="factorNote" rows="2" placeholder="各成果調整因子若有差異，或有其他特殊情境，請在此說明"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="card" id="card5">
+          <div class="card-header" onclick="toggleCard('card5')">
+            <div class="step-num" id="sn5">5</div>
+            <div>
+              <div class="card-title">計算與報告生成</div>
+              <div class="card-subtitle">SROI 比率計算、敏感性分析、正式報告書</div>
+            </div>
+            <div class="chevron" id="cv5">▾</div>
+          </div>
+          <div class="card-body" id="cb5">
+            <div id="calcChecklist"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick="calcSROI()">計算 SROI</button>
+              <button class="btn btn-accent" id="reportBtn" onclick="genReport()" disabled>生成 AI 報告書</button>
+              <button class="btn btn-outline" onclick="resetForm()">清除重填</button>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressBar" style="width:0"></div></div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div class="result-box" id="resultBox">
+          <div class="result-top">
+            <div>
+              <div class="result-ratio" id="sroiRatio">— : 1</div>
+              <div class="result-label">SROI 比率（每投入 NT$1 創造的社會價值）</div>
+            </div>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-item"><div class="kpi-v" id="kIn">—</div><div class="kpi-k">投入總額</div></div>
+            <div class="kpi-item"><div class="kpi-v" id="kPV">—</div><div class="kpi-k">淨成果現值</div></div>
+            <div class="kpi-item"><div class="kpi-v" id="kYrs">—</div><div class="kpi-k">最長效益年期</div></div>
+            <div class="kpi-item"><div class="kpi-v" id="kDisc">—</div><div class="kpi-k">折現率</div></div>
+          </div>
+          <div class="result-interp" id="resultInterp"></div>
+          <div id="sensBox" style="margin-top:16px"></div>
+        </div>
+
+        <!-- Report -->
+        <div class="report-box" id="reportBox">
+          <div class="report-header">
+            <div class="report-header-left">
+              <span class="report-filename" id="reportFilename">sroi_report.md</span>
+              <span class="streaming-dot" id="streamDot"></span>
+            </div>
+            <button class="btn btn-outline" style="font-size:12px;padding:5px 12px" onclick="copyReport()">複製全文</button>
+          </div>
+          <div class="report-body" id="reportContent"></div>
+        </div>
+
+      </div><!-- end panel A -->
+
+      <!-- ─────────────── PANEL B ─────────────── -->
+      <div class="panel" id="panel-calcB">
+        <div class="alert alert-warn" style="margin-bottom:20px">
+          <span class="alert-icon">⚠</span>
+          <span>本模式為<strong>預測性 SROI（Forecast SROI）</strong>，所有估算均基於假設而非實測數據。建議執行後進行事後評估性 SROI 以驗證準確性。</span>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="cursor:default">
+            <div class="step-num done">B</div>
+            <div>
+              <div class="card-title">規劃概念描述</div>
+              <div class="card-subtitle">AI 將協助展開正負向影響力分析與預測報告</div>
+            </div>
+          </div>
+          <div class="card-body open">
+            <div class="form-row">
+              <label class="form-label">計畫 / 活動名稱</label>
+              <input type="text" id="bName" placeholder="例：社區長者數位陪伴志工計畫">
+            </div>
+            <div class="form-row">
+              <label class="form-label">計畫概念描述 <span class="req">*</span></label>
+              <textarea id="bDesc" rows="5" placeholder="請描述你的想法：服務對象是誰？要做什麼活動？預計投入多少資源？希望解決什麼社會問題？（越詳細越好，AI 會根據此內容展開全面的影響力分析）"></textarea>
+            </div>
+            <div class="grid-2">
+              <div class="form-row">
+                <label class="form-label">預計投入金額（元）</label>
+                <input type="number" id="bBudget" placeholder="粗估即可">
+              </div>
+              <div class="form-row">
+                <label class="form-label">預計執行年數</label>
+                <input type="number" id="bYears" value="1" min="1" max="10">
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">地理範圍與執行背景</label>
+              <input type="text" id="bScope" placeholder="例：台灣台南市，針對65歲以上長者">
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-accent" onclick="genForecast()">展開預測性 SROI 分析</button>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="bProgress" style="width:0"></div></div>
+          </div>
+        </div>
+
+        <div class="report-box" id="bReportBox">
+          <div class="report-header">
+            <div class="report-header-left">
+              <span class="report-filename" id="bReportFilename">forecast_sroi.md</span>
+              <span class="streaming-dot" id="bStreamDot"></span>
+            </div>
+            <button class="btn btn-outline" style="font-size:12px;padding:5px 12px" onclick="copyBReport()">複製全文</button>
+          </div>
+          <div class="report-body" id="bReportContent"></div>
+        </div>
+      </div>
+
+      <!-- ─────────────── PANEL METHOD ─────────────── -->
+      <div class="panel" id="panel-method">
+        <div class="method-qa">
+          <div class="form-row">
+            <label class="form-label">SROI 方法論問題</label>
+            <textarea id="methodQ" rows="3" placeholder="例如：無謂損失率如何設定？財務代理值如何從政府統計取得？Evaluative 與 Forecast SROI 差別是什麼？"></textarea>
+          </div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn btn-primary" onclick="askMethod()">諮詢 SROI 方法論</button>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="mProgress" style="width:0"></div></div>
+        </div>
+        <div class="report-box" id="methodBox">
+          <div class="report-header">
+            <div class="report-header-left">
+              <span class="report-filename">方法論說明</span>
+              <span class="streaming-dot" id="mStreamDot"></span>
+            </div>
+            <button class="btn btn-outline" style="font-size:12px;padding:5px 12px" onclick="copyMethod()">複製</button>
+          </div>
+          <div class="report-body" id="methodContent"></div>
+        </div>
+      </div>
+
+      <!-- ─────────────── PANEL ABOUT ─────────────── -->
+      <div class="panel" id="panel-about">
+        <div class="about-section">
+          <h2>Social Value International 八大原則</h2>
+          <p>SROI 計算框架依據 Social Value International（前身 SROI Network）發布之《A Guide to Social Return on Investment》（第二版，2012）建立，並於 2014年、2021年更新。</p>
+          <div class="principle-list">
+            <div class="principle-item"><div class="p-num">1</div><div class="p-content"><div class="p-en">Involve Stakeholders</div><div class="p-zh">利害關係人參與原則 — 涉及利害關係人以告知何為重要及如何衡量</div></div></div>
+            <div class="principle-item"><div class="p-num">2</div><div class="p-content"><div class="p-en">Understand What Changes</div><div class="p-zh">理解變化原則 — 說明變化如何產生，認知正向與負向、預期與非預期的成果</div></div></div>
+            <div class="principle-item"><div class="p-num">3</div><div class="p-content"><div class="p-en">Value the Things That Matter</div><div class="p-zh">重視重要事物原則 — 依利害關係人偏好賦予成果貨幣化或非貨幣化價值（2014年更新）</div></div></div>
+            <div class="principle-item"><div class="p-num">4</div><div class="p-content"><div class="p-en">Only Include What Is Material</div><div class="p-zh">重大性原則 — 只納入對利害關係人決策有真正影響的資訊與成果</div></div></div>
+            <div class="principle-item"><div class="p-num">5</div><div class="p-content"><div class="p-en">Do Not Overclaim</div><div class="p-zh">不過度主張原則 — 嚴格應用無謂損失、歸因、替代效應等調整因子</div></div></div>
+            <div class="principle-item"><div class="p-num">6</div><div class="p-content"><div class="p-en">Be Transparent</div><div class="p-zh">透明性原則 — 揭露所有假設、計算依據，並說明如何向利害關係人報告</div></div></div>
+            <div class="principle-item"><div class="p-num">7</div><div class="p-content"><div class="p-en">Verify the Result</div><div class="p-zh">可驗證性原則 — 確保獨立第三方可進行適當查證</div></div></div>
+            <div class="principle-item" style="border:none"><div class="p-num">8</div><div class="p-content"><div class="p-en">Be Responsive</div><div class="p-zh">回應性原則 — 根據社會影響力資訊進行決策，持續優化對所有受影響群體的正向影響（2021年新增）</div></div></div>
+          </div>
+          <h2 style="margin-top:28px;font-size:16px">核心文獻</h2>
+          <ol class="ref-list" style="margin-top:12px">
+            <li>Nicholls, J., Lawlor, E., Neitzert, E., & Goodspeed, T. (2012). <em>A Guide to Social Return on Investment</em> (2nd ed.). Social Value UK / Cabinet Office.</li>
+            <li>Social Value International. (2021). <em>Standard on applying Social Value International Principles</em>. Social Value International.</li>
+            <li>HM Treasury. (2022). <em>The Green Book: Central government guidance on appraisal and evaluation</em>. HM Treasury, UK Government.</li>
+            <li>EVPA. (2015). <em>A Practical Guide to Measuring and Managing Impact</em>. European Venture Philanthropy Association.</li>
+            <li>行政院主計總處. (最新年度). <em>國民所得統計摘要</em>. 行政院主計總處.</li>
+          </ol>
+        </div>
+      </div>
+
+    </div><!-- content-area -->
+  </main>
+</div>
+
+<script>
+// ─────────────────────────────────
+// CONFIG — 在此填入你的 API Key
+// ─────────────────────────────────
+const HARDCODED_API_KEY = '';  // 直接填入: 'sk-ant-api03-...'
+// 若留空，系統會從 localStorage 讀取（透過右上角設定）
+
+// ─────────────────────────────────
+// API Key 管理
+// ─────────────────────────────────
+function getKey() {
+  return HARDCODED_API_KEY || localStorage.getItem('sroi_api_key') || '';
+}
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) { alert('請輸入 API Key'); return; }
+  localStorage.setItem('sroi_api_key', k);
+  closeModal();
+  updateApiStatus();
+}
+function openModal() { document.getElementById('apiModal').classList.add('show'); }
+function closeModal() { document.getElementById('apiModal').classList.remove('show'); }
+function updateApiStatus() {
+  const k = getKey();
+  const dot = document.getElementById('apiDot');
+  const txt = document.getElementById('apiStatusText');
+  if (k) {
+    dot.classList.add('ok');
+    txt.textContent = 'API 已連線';
+  } else {
+    dot.classList.remove('ok');
+    txt.textContent = 'API Key 未設定';
+  }
+}
+
+// ─────────────────────────────────
+// Navigation
+// ─────────────────────────────────
+const panelTitles = {
+  calcA: '模式 A：事後評估 SROI 計算',
+  calcB: '模式 B：預測性 SROI 規劃',
+  method: 'SROI 方法論問答',
+  about: '關於 SROI 國際準則'
+};
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('nav-' + id)?.classList.add('active');
+  document.getElementById('topbarTitle').textContent = panelTitles[id] || '';
+}
+
+// ─────────────────────────────────
+// Card collapse
+// ─────────────────────────────────
+function toggleCard(id) {
+  const body = document.getElementById('cb' + id.replace('card',''));
+  const chev = document.getElementById('cv' + id.replace('card',''));
+  const open = body.classList.toggle('open');
+  chev?.classList.toggle('open', open);
+}
+
+// ─────────────────────────────────
+// Input total
+// ─────────────────────────────────
+function updateTotal() {
+  const c = parseFloat(document.getElementById('cashIn')?.value) || 0;
+  const k = parseFloat(document.getElementById('inkindIn')?.value) || 0;
+  const t = c + k;
+  const el = document.getElementById('totalDisplay');
+  if (!el) return;
+  if (t > 0) {
+    el.innerHTML = `投入總額 <span class="big">NT$ ${t.toLocaleString()}</span> 元`;
+  } else {
+    el.textContent = '投入總額：尚未填寫';
+  }
+}
+
+// ─────────────────────────────────
+// Stakeholders
+// ─────────────────────────────────
+let shIdx = 0;
+function shDefaults() {
+  const g = (id, d) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
+  return { dw: g('deadweight', 20), attr: g('attribution', 80), disp: g('displacement', 0),
+           drop: g('dropoff', 10), yrs: g('calcYears', 3) };
+}
+function addSH(preset) {
+  const i = shIdx++;
+  const d = Object.assign({ nm:'', n:'', unit:'人', px:'', src:'', out:'', type:'once', inc:true }, shDefaults(), preset || {});
+  if (!preset && d.type === 'once') { d.yrs = 1; d.drop = 0; }
+  const div = document.createElement('div');
+  div.className = 'sh-block';
+  div.id = 'sh' + i;
+  const opt = (v, t) => `<option value="${v}" ${d.type===v?'selected':''}>${t}</option>`;
+  div.innerHTML = `
+    <div class="sh-block-header">
+      <div class="sh-tag">SH-${String(i+1).padStart(2,'0')}</div>
+      <div class="sh-block-title">利害關係人 ${i+1}</div>
+      <button class="sh-remove" onclick="document.getElementById('sh${i}').remove()">移除</button>
+    </div>
+    <div class="grid-3">
+      <div class="form-row"><label class="form-label">名稱 / 群體 <span class="req">*</span></label>
+        <input type="text" id="shNm${i}" value="${d.nm}" placeholder="例：參與學員"></div>
+      <div class="form-row"><label class="form-label">數量 <span class="req">*</span></label>
+        <input type="number" id="shN${i}" value="${d.n}" placeholder="人數或數量"></div>
+      <div class="form-row"><label class="form-label">單位</label>
+        <input type="text" id="shU${i}" value="${d.unit}" placeholder="人 / kg / 式"></div>
+    </div>
+    <div class="form-row"><label class="form-label">主要成果描述 <span class="req">*</span></label>
+      <textarea id="shOut${i}" rows="2" placeholder="此群體獲得的核心改變">${d.out}</textarea></div>
+    <div class="grid-3">
+      <div class="form-row"><label class="form-label">成果類型 <span class="req">*</span></label>
+        <select id="shT${i}" onchange="onTypeChange(${i})">
+          ${opt('once','一次性體驗（只計 1 年）')}${opt('lasting','持續性改變（需有證據）')}${opt('neg','負向成果（扣除）')}
+        </select></div>
+      <div class="form-row"><label class="form-label">財務代理值（元/單位）<span class="req">*</span></label>
+        <input type="number" id="shPx${i}" value="${d.px}" placeholder="負向成果也填正數"></div>
+      <div class="form-row"><label class="form-label">代理值來源</label>
+        <input type="text" id="shSrc${i}" value="${d.src}" placeholder="文獻或統計來源"></div>
+    </div>
+    <div class="grid-3">
+      <div class="form-row"><label class="form-label">無謂損失（%）</label><input type="number" id="shDw${i}" value="${d.dw}"></div>
+      <div class="form-row"><label class="form-label">歸因比例（%）</label><input type="number" id="shAt${i}" value="${d.attr}"></div>
+      <div class="form-row"><label class="form-label">替代效應（%）</label><input type="number" id="shDp${i}" value="${d.disp}"></div>
+    </div>
+    <div class="grid-3">
+      <div class="form-row"><label class="form-label">衰退率（%/年）</label><input type="number" id="shDo${i}" value="${d.drop}"></div>
+      <div class="form-row"><label class="form-label">效益年期（年）</label><input type="number" id="shY${i}" value="${d.yrs}" min="1" max="10"></div>
+      <div class="form-row"><label class="form-label">納入主計算</label>
+        <select id="shInc${i}"><option value="1" ${d.inc?'selected':''}>是</option><option value="0" ${d.inc?'':'selected'}>否（只列情境分析）</option></select></div>
+    </div>
+    <div class="form-hint" style="color:var(--warn)">⚠ 一次性體驗乘上多年期會重複計價；持續性改變需有問卷或追蹤證據才可主張。無可查核依據的成果請選「否」。</div>
+  `;
+  document.getElementById('shContainer').appendChild(div);
+}
+function onTypeChange(i) {
+  const t = document.getElementById('shT' + i).value;
+  const set = (k, v) => { document.getElementById(k + i).value = v; };
+  const g = shDefaults();
+  if (t === 'once') { set('shY', 1); set('shDo', 0); }
+  if (t === 'lasting') { set('shY', g.yrs); set('shDo', g.drop); }
+  if (t === 'neg') { set('shY', 1); set('shDo', 0); set('shDw', 0); set('shAt', 100); set('shDp', 0); }
+}
+
+// ─────────────────────────────────
+// Calc
+// ─────────────────────────────────
+let lastCalc = null;
+let lastReport = '';
+function numOr(id, d) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; }
+
+/* SROI_CORE_START */
+function computeSROI(input, mod) {
+  mod = mod || {};
+  const pxMul = mod.pxMul == null ? 1 : mod.pxMul, dwAdd = mod.dwAdd || 0, atAdd = mod.atAdd || 0;
+  const clamp = v => Math.min(1, Math.max(0, v));
+  const r = input.disc;
+  let posPV = 0, negPV = 0, extraPV = 0, maxYrs = 0;
+  const rows = input.items.map(it => {
+    const neg = it.type === 'neg';
+    const px = neg ? it.px : it.px * pxMul;
+    const dw = neg ? it.dw : clamp(it.dw + dwAdd);
+    const at = neg ? it.attr : clamp(it.attr + atAdd);
+    const yrs = Math.max(1, Math.round(it.yrs || 1));
+    const base = it.n * px * (1 - dw) * (1 - it.disp) * at;
+    const pvs = [];
+    for (let y = 1; y <= yrs; y++) pvs.push(base * Math.pow(1 - it.drop, y - 1) / Math.pow(1 + r, y));
+    let pv = pvs.reduce((a, b) => a + b, 0);
+    if (neg) pv = -pv;
+    if (it.inc) { if (neg) negPV += pv; else posPV += pv; maxYrs = Math.max(maxYrs, yrs); }
+    else extraPV += pv;
+    return Object.assign({}, it, { raw: it.n * px, base, pvs, pv });
+  });
+  const netPV = posPV + negPV;
+  return { rows, posPV, negPV, netPV, extraPV, maxYrs,
+           sroi: netPV / input.totalIn, sroiAll: (netPV + extraPV) / input.totalIn };
+}
+function sensitivity(input) {
+  const f = m => computeSROI(input, m).sroi;
+  return [
+    { label: '財務代理值', cols: ['−20%','−10%','基準','+10%','+20%'],
+      vals: [0.8,0.9,1,1.1,1.2].map(k => f({ pxMul: k })) },
+    { label: '無謂損失率', cols: ['−20pp','−10pp','基準','+10pp','+20pp'],
+      vals: [-0.2,-0.1,0,0.1,0.2].map(k => f({ dwAdd: k })) },
+    { label: '歸因比例', cols: ['−20pp','−10pp','基準','+10pp','+20pp'],
+      vals: [-0.2,-0.1,0,0.1,0.2].map(k => f({ atAdd: k })) },
+  ];
+}
+/* SROI_CORE_END */
+
+function readInput() {
+  const cash = parseFloat(document.getElementById('cashIn').value) || 0;
+  const inkind = parseFloat(document.getElementById('inkindIn').value) || 0;
+  const items = [];
+  document.querySelectorAll('.sh-block').forEach(bl => {
+    const i = bl.id.replace('sh', '');
+    const v = (k, d) => { const x = parseFloat(document.getElementById(k + i)?.value); return isNaN(x) ? d : x; };
+    items.push({
+      nm: document.getElementById('shNm' + i).value || '未命名',
+      unit: document.getElementById('shU' + i).value || '',
+      out: document.getElementById('shOut' + i).value || '',
+      src: document.getElementById('shSrc' + i).value || '',
+      type: document.getElementById('shT' + i).value,
+      inc: document.getElementById('shInc' + i).value === '1',
+      n: v('shN', 0), px: Math.abs(v('shPx', 0)),
+      dw: v('shDw', 0) / 100, attr: v('shAt', 100) / 100, disp: v('shDp', 0) / 100,
+      drop: v('shDo', 0) / 100, yrs: v('shY', 1)
+    });
+  });
+  return { cash, inkind, totalIn: cash + inkind, disc: numOr('discRate', 3.5) / 100, items };
+}
+
+function calcSROI() {
+  const input = readInput();
+  if (input.totalIn <= 0) { alert('請填寫投入金額'); return; }
+  if (input.items.length === 0) { alert('請至少新增一位利害關係人'); return; }
+  const res = computeSROI(input);
+  const sens = sensitivity(input);
+  const sv = res.sroi;
+  const sroi = sv.toFixed(2);
+
+  const warnings = [];
+  res.rows.forEach(it => {
+    if (!it.src && it.type !== 'neg') warnings.push(`${it.nm} 的財務代理值缺乏文獻來源`);
+    if (it.type === 'once' && it.yrs > 1) warnings.push(`${it.nm} 為一次性體驗卻計 ${it.yrs} 年，可能重複計價（違反 P5）`);
+    if (it.type === 'lasting' && it.inc) warnings.push(`${it.nm} 主張持續性改變，需有問卷或追蹤證據`);
+  });
+  if (!res.rows.some(it => it.type === 'neg')) warnings.push('未列任何負向成果（P2 要求呈現，例如活動碳排）');
+
+  const rb = document.getElementById('resultBox');
+  rb.classList.add('show');
+  document.getElementById('sroiRatio').textContent = sroi + ' : 1';
+  document.getElementById('kIn').textContent = 'NT$' + fmt(input.totalIn);
+  document.getElementById('kPV').textContent = 'NT$' + fmt(Math.round(res.netPV));
+  document.getElementById('kYrs').textContent = res.maxYrs + ' 年';
+  document.getElementById('kDisc').textContent = (input.disc * 100).toFixed(1) + '%';
+
+  let interp;
+  if (sv >= 10) interp = '⚠ SROI 超過 10:1，請仔細確認財務代理值與調整因子的合理性，並強化敏感性分析。';
+  else if (sv >= 5) interp = '◎ 每投入 NT$1 創造超過 NT$5 社會價值。建議進行獨立第三方驗證。';
+  else if (sv >= 2) interp = '✓ 社會效益顯著大於投入。';
+  else if (sv >= 1) interp = '→ 社會效益大於投入，但幅度有限。';
+  else interp = '✕ 目前可查證的社會價值低於投入。若活動有多年期行為改變，需以前後測問卷取得證據後才能主張。';
+  interp += `\n\n正向成果 PV：NT$${Math.round(res.posPV).toLocaleString()}　負向成果 PV：NT$${Math.round(res.negPV).toLocaleString()}`;
+  if (Math.abs(res.extraPV) > 0) interp += `\n情境：納入未列入主計算的成果後 SROI ＝ ${res.sroiAll.toFixed(2)} : 1`;
+  if (warnings.length) interp += '\n\n⚠ 數據警示：\n· ' + warnings.join('\n· ');
+  document.getElementById('resultInterp').textContent = interp;
+
+  const td = 'style="padding:6px 8px;border:1px solid rgba(255,255,255,0.25);text-align:center"';
+  let t = `<div style="font-size:13px;font-weight:500;margin-bottom:8px">敏感性分析（Step 6）</div><table style="border-collapse:collapse;width:100%;font-size:12px">`;
+  t += `<tr><th ${td}>調整變數</th>` + sens[0].cols.map((_, j) => `<th ${td}>${['−2','−1','基準','+1','+2'][j]}</th>`).join('') + '</tr>';
+  sens.forEach(s => {
+    t += `<tr><td ${td}>${s.label}（${s.cols[0]}…${s.cols[4]}）</td>` +
+         s.vals.map((v, j) => `<td ${td}>${j === 2 ? '<b>' : ''}${v.toFixed(2)}${j === 2 ? '</b>' : ''}</td>`).join('') + '</tr>';
+  });
+  const all = sens.flatMap(s => s.vals);
+  t += `</table><div style="font-size:12px;margin-top:6px">SROI 範圍：${Math.min(...all).toFixed(2)} ～ ${Math.max(...all).toFixed(2)} : 1</div>`;
+  document.getElementById('sensBox').innerHTML = t;
+
+  const items = [
+    { ok: input.totalIn > 0, label: '投入總額已填寫' },
+    { ok: input.items.length > 0, label: '至少有一位利害關係人' },
+    { ok: !warnings.some(w => w.includes('文獻來源')), label: '所有財務代理值均有來源' },
+    { ok: !warnings.some(w => w.includes('重複計價')), label: '一次性體驗未重複計價（P5）' },
+    { ok: res.rows.some(it => it.type === 'neg'), label: '已列入負向成果（P2）' },
+    { ok: !!document.getElementById('projName').value, label: '計畫名稱已填寫' },
+    { ok: true, label: '敏感性分析已完成' },
+  ];
+  let html = '<div style="margin-bottom:12px;font-size:13px;font-weight:500">計算完整性查核</div><div class="checklist">';
+  items.forEach(it => {
+    html += `<div class="check-item"><div class="check-icon ${it.ok ? 'ci-ok' : 'ci-warn'}">${it.ok ? '✓' : '!'}</div><span>${it.label}</span></div>`;
+  });
+  document.getElementById('calcChecklist').innerHTML = html + '</div>';
+
+  document.getElementById('progressBar').style.width = '55%';
+  document.getElementById('reportBtn').disabled = false;
+  document.getElementById('sn5').classList.add('done');
+
+  lastCalc = { sroi, totalIn: input.totalIn, totalPV: res.netPV, res, sens, disc: input.disc, warnings };
+  rb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function loadExample() {
+  const set = (id, v) => { document.getElementById(id).value = v; };
+  set('projName', '山林水企業ESG家庭環境志工日（教學範例・保守版）');
+  set('orgName', '山林水環境工程股份有限公司 × 桃園市小農手匠發展協會');
+  set('evalType', 'evaluative'); set('dateStart', '2025/10'); set('dateEnd', '2025/10');
+  set('projDesc', '員工與眷屬至春燕生態農場進行陂塘生態教育、古法捕魚與美國螯蝦外來種移除。');
+  set('cashIn', 80000); set('inkindIn', 17600); set('discRate', 3.5);
+  updateTotal();
+  document.getElementById('shContainer').innerHTML = ''; shIdx = 0;
+  const base = { dw: 20, attr: 85, disp: 5, drop: 0, yrs: 1, type: 'once', inc: true };
+  addSH(Object.assign({}, base, { nm: '員工', n: 15, px: 3500, src: '【建議查證】半日生態體驗市價', out: '半日生態體驗與環境教育' }));
+  addSH(Object.assign({}, base, { nm: '眷屬大人', n: 5, px: 2000, src: '【建議查證】親子農場體驗市價', out: '親子生態體驗' }));
+  addSH(Object.assign({}, base, { nm: '兒童', n: 8, px: 1200, src: '【建議查證】兒童自然體驗課程市價', out: '自然體驗與生態知識' }));
+  addSH({ nm: '生態環境（外來種移除）', n: 10, unit: 'kg', px: 300, src: '【建議查證】政府委辦外來種清除費等值', out: '移除美國螯蝦約 10 kg（估算）', type: 'lasting', dw: 15, attr: 80, disp: 5, drop: 10, yrs: 3, inc: true });
+  addSH({ nm: '山林水品牌效益', n: 1, unit: '式', px: 15000, src: '', out: 'ESG 品牌信任（無可查核依據）', type: 'lasting', dw: 30, attr: 60, disp: 10, drop: 25, yrs: 3, inc: false });
+  addSH(Object.assign({}, base, { nm: '身分未確認參與者', n: 16, px: 2000, src: '', out: '44 人中 16 人身分待確認', inc: false }));
+  addSH({ nm: '活動碳排', n: 1, unit: '式', px: 56.9, src: '春燕農場碳足跡證明書 3.447 kgCO₂e/人×55人×碳價 NT$300/公噸', out: '189.6 kgCO₂e', type: 'neg', dw: 0, attr: 100, disp: 0, drop: 0, yrs: 1, inc: true });
+  calcSROI();
+}
+
+function fmt(n) {
+  if (n >= 1e8) return (n / 1e8).toFixed(1) + '億';
+  if (n >= 10000) return Math.round(n / 10000) + '萬';
+  return n.toLocaleString();
+}
+
+// ─────────────────────────────────
+// API stream helper
+// ─────────────────────────────────
+async function streamAPI(systemPrompt, userPrompt, outputEl, dotEl, progressEl, onDone) {
+  const key = getKey();
+  if (!key) {
+    outputEl.textContent = '⚠ 請先設定 API Key（點選右上角「API Key 未設定」）';
+    return;
+  }
+  dotEl.classList.add('active');
+  outputEl.textContent = '';
+  let collected = '';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5-5',
+        max_tokens: 4096,
+        stream: true,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      outputEl.textContent = '❌ API 錯誤：' + (err.error?.message || JSON.stringify(err));
+      dotEl.classList.remove('active');
+      return;
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder(); let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop(); for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const d = line.slice(6);
+          if (d === '[DONE]') break;
+          try {
+            const j = JSON.parse(d);
+            if (j.type === 'content_block_delta' && j.delta?.text) {
+              collected += j.delta.text;
+              outputEl.textContent = collected;
+              outputEl.scrollTop = outputEl.scrollHeight;
+            }
+          } catch(e) {}
+        }
+      }
+    }
+    progressEl.style.width = '100%';
+  } catch(e) {
+    outputEl.textContent = '❌ 連線失敗：' + e.message;
+  }
+  dotEl.classList.remove('active');
+  if (onDone) onDone(collected);
+  return collected;
+}
+
+// ─────────────────────────────────
+// Generate Report (Mode A)
+// ─────────────────────────────────
+async function genReport() {
+  if (!lastCalc) { alert('請先計算 SROI'); return; }
+  const d = lastCalc;
+  document.getElementById('reportBox').classList.add('show');
+  document.getElementById('reportBtn').disabled = true;
+  document.getElementById('progressBar').style.width = '70%';
+  const projName = document.getElementById('projName').value || '未命名計畫';
+  const orgName = document.getElementById('orgName').value || '未填寫';
+  const evalType = document.getElementById('evalType').value === 'forecast' ? '預測性 (Forecast)' : '評估性 (Evaluative)';
+  const desc = document.getElementById('projDesc').value;
+  const fundRatio = document.getElementById('fundRatio').value;
+  const factorNote = document.getElementById('factorNote').value;
+  document.getElementById('reportFilename').textContent = projName.replace(/\s/g,'_') + '_SROI報告.md';
+
+  const typeName = { once: '一次性體驗', lasting: '持續性改變', neg: '負向成果' };
+  let shLines = d.res.rows.map((s,i) =>
+    `- SH${i+1} ${s.nm}（${typeName[s.type]}，${s.inc ? '納入主計算' : '僅列情境'}）：${s.n}${s.unit}，成果：${s.out}，代理值：NT$${s.px}/${s.unit}，來源：${s.src||'未提供（⚠需補充）'}，DW ${(s.dw*100).toFixed(0)}%、歸因 ${(s.attr*100).toFixed(0)}%、替代 ${(s.disp*100).toFixed(0)}%、衰退 ${(s.drop*100).toFixed(0)}%/年、年期 ${s.yrs} 年，PV：NT$${Math.round(s.pv).toLocaleString()}`
+  ).join('\n');
+  const sensLines = d.sens.map(s => `${s.label}：${s.cols.map((c,j)=>c+' '+s.vals[j].toFixed(2)).join('｜')}`).join('\n');
+
+  const sysPrompt = `你是一位具備國際認證的SROI精算師，嚴格依據Social Value International八大原則（2012建立，2014、2021更新）計算與撰寫報告。你的報告必須：
+1. 包含所有要求的章節，結構完整
+2. 所有假設透明揭露，不得編造任何數值
+3. 凡財務代理值缺少來源，必須加入⚠警示方塊
+4. 以繁體中文撰寫，學術用語附英文對照
+5. 文獻引用使用APA第七版格式`;
+
+  const userPrompt = `請依據以下資料，建構一份完整的正式 SROI 社會影響力評估報告書：
+
+【計畫基本資訊】
+名稱：${projName}
+執行單位：${orgName}
+評估類型：${evalType}
+計畫描述：${desc}
+資金來源：${fundRatio || '未說明'}
+
+【SROI 計算結果】
+投入總額：NT$ ${d.totalIn.toLocaleString()} 元
+成果現值合計：NT$ ${Math.round(d.totalPV).toLocaleString()} 元
+SROI 比率：${d.sroi} : 1
+正向成果 PV：NT$ ${Math.round(d.res.posPV).toLocaleString()} 元 | 負向成果 PV：NT$ ${Math.round(d.res.negPV).toLocaleString()} 元
+折現率：${(d.disc*100).toFixed(1)}%（各利害關係人的調整因子與年期見下方清單）
+
+【敏感性分析（已由計算器算出，請直接引用，不得改動數值）】
+${sensLines}
+
+【利害關係人清單】
+${shLines}
+
+${d.warnings.length ? '【數據警示】\n' + d.warnings.map(w=>'⚠ '+w).join('\n') : ''}
+${factorNote ? '【特殊情境說明】\n' + factorNote : ''}
+
+請建構包含以下章節的正式報告書：
+一、執行摘要（含SROI比率、主要3項成果、建議事項）
+二、計畫背景與目標
+三、方法論說明（引用SVI 2012國際標準）
+四、利害關係人分析表
+五、成果影響力地圖（Theory of Change邏輯鏈）
+六、量化計算彙整表
+七、SROI計算結果與解讀
+八、敏感性分析（引用上方已計算數值）
+九、結論與建議
+十、報告品質查檢表（依SVI八大原則逐項查核）
+十一、文獻引用（APA第七版，必含SVI 2012、SVI 2021核心文獻）
+${d.warnings.length ? '\n特別注意：在相關章節加入⚠警示方塊說明數據不確定性，並在品質查檢表中標記可信度為「中度可信」。' : ''}`;
+
+  await streamAPI(
+    sysPrompt, userPrompt,
+    document.getElementById('reportContent'),
+    document.getElementById('streamDot'),
+    document.getElementById('progressBar'),
+    txt => { lastReport = txt; document.getElementById('reportBtn').disabled = false; }
+  );
+}
+
+// ─────────────────────────────────
+// Generate Forecast (Mode B)
+// ─────────────────────────────────
+let bReport = '';
+async function genForecast() {
+  const desc = document.getElementById('bDesc').value;
+  if (!desc) { alert('請填寫計畫概念描述'); return; }
+  const name = document.getElementById('bName').value || '未命名計畫';
+  const budget = document.getElementById('bBudget').value;
+  const yrs = document.getElementById('bYears').value;
+  const scope = document.getElementById('bScope').value;
+  document.getElementById('bReportBox').classList.add('show');
+  document.getElementById('bProgress').style.width = '30%';
+  document.getElementById('bReportFilename').textContent = name.replace(/\s/g,'_') + '_預測SROI.md';
+
+  const sysPrompt = `你是一位具備國際認證的SROI精算師，專門執行預測性SROI（Forecast SROI）分析。你嚴格依據Social Value International八大原則（2012、2014、2021更新版）操作。你必須：
+1. 進行深度情境分析（個人→家庭→社區→國家→國際五層次影響力掃描）
+2. 建構完整的正負向影響力矩陣
+3. 識別所有潛在負向影響並如實呈現
+4. 提出估算性財務代理值但必須標明為估算並附文獻依據
+5. 完成帶查檢表的完整預測性報告書
+6. 以繁體中文撰寫，學術用語附英文對照`;
+
+  const userPrompt = `請對以下計畫構想執行完整的預測性SROI（Forecast SROI）分析：
+
+【計畫構想】
+名稱：${name}
+描述：${desc}
+${budget ? '預計投入：NT$ ' + parseInt(budget).toLocaleString() + ' 元' : ''}
+${yrs ? '預計執行：' + yrs + ' 年' : ''}
+${scope ? '地理範圍：' + scope : ''}
+
+請完成以下工作：
+
+【第一部分：深度情境分析】
+1.1 社會問題框架化（根本問題、規模、現有解決方案不足之處）
+1.2 理論變革邏輯（Theory of Change，含中介機制與前提條件）
+1.3 五層次影響力掃描（個人/家庭/社區/國家政策/國際SDGs）
+1.4 風險與負向影響力識別（包含：資源排擠、依賴性、副作用、文化衝突、環境影響）
+
+【第二部分：正負向影響力矩陣】
+以表格格式呈現六維度（個人/家庭組織/社區地方/國家政策/國際SDGs/環境）的正向、負向、淨影響
+
+【第三部分：利害關係人識別與估算】
+識別至少3類利害關係人，為每類提出：
+- 主要成果指標
+- 估算財務代理值（需標明⚠為估算值，並提供參考文獻建議）
+- 適用的無謂損失率與衰退率建議值
+
+【第四部分：預測性SROI報告書】
+包含：
+一、執行摘要（含聲明：本報告為預測性SROI）
+二、計畫背景與目標
+三、方法論說明
+四、利害關係人分析表
+五、成果影響力地圖
+六、估算計算說明（含不確定性等級）
+七、預測SROI比率範圍
+八、敏感性分析
+九、建議的後續追蹤指標
+十、報告品質查檢表（依SVI八大原則）
+十一、文獻引用（APA第七版）`;
+
+  await streamAPI(
+    sysPrompt, userPrompt,
+    document.getElementById('bReportContent'),
+    document.getElementById('bStreamDot'),
+    document.getElementById('bProgress'),
+    txt => { bReport = txt; }
+  );
+}
+
+// ─────────────────────────────────
+// Method Q&A
+// ─────────────────────────────────
+let methodReport = '';
+async function askMethod() {
+  const q = document.getElementById('methodQ').value;
+  if (!q) { alert('請輸入問題'); return; }
+  document.getElementById('methodBox').classList.add('show');
+  document.getElementById('mProgress').style.width = '30%';
+  const sysPrompt = `你是SROI國際標準方法論專家，嚴格依據Social Value International八大原則（2012建立，2014、2021更新）及Nicholls et al.(2012)指南回答問題。你的回答必須：
+1. 有所依據，引用原始文獻，不編造數值或案例
+2. 以繁體中文回答，技術術語附英文對照
+3. 在回答末尾附上相關參考文獻（APA第七版格式）
+4. 若問題涉及實際計算，提供清晰的計算邏輯說明`;
+  await streamAPI(
+    sysPrompt, q,
+    document.getElementById('methodContent'),
+    document.getElementById('mStreamDot'),
+    document.getElementById('mProgress'),
+    txt => { methodReport = txt; }
+  );
+}
+
+// ─────────────────────────────────
+// Copy helpers
+// ─────────────────────────────────
+function copyReport() { navigator.clipboard.writeText(lastReport).then(()=>alert('已複製到剪貼簿')); }
+function copyBReport() { navigator.clipboard.writeText(bReport).then(()=>alert('已複製到剪貼簿')); }
+function copyMethod() { navigator.clipboard.writeText(methodReport).then(()=>alert('已複製到剪貼簿')); }
+
+// ─────────────────────────────────
+// Reset
+// ─────────────────────────────────
+function resetForm() { if (confirm('確定清除所有已填寫資料？')) location.reload(); }
+
+// ─────────────────────────────────
+// Init
+// ─────────────────────────────────
+updateApiStatus();
+addSH(); // 預設一位利害關係人
+// 打開所有 cards
+['cb1','cb2','cb3','cb4','cb5'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+});
+['cv1','cv2','cv3','cv4','cv5'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+});
+</script>
+</body>
+</html>
