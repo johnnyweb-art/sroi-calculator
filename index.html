@@ -1273,7 +1273,7 @@ function calcSROI() {
   else if (sv >= 2) interp = '✓ 社會效益顯著大於投入。';
   else if (sv >= 1) interp = '→ 社會效益大於投入，但幅度有限。';
   else interp = '✕ 目前可查證的社會價值低於投入。若活動有多年期行為改變，需以前後測問卷取得證據後才能主張。';
-  interp += `\n\n正向成果 PV：NT$${Math.round(res.posPV).toLocaleString()}　負向成果 PV：NT$${Math.round(res.negPV).toLocaleString()}`;
+  interp += `\n\n正向成果 PV：NT$${Math.round(res.posPV).toLocaleString()}　負向成果 PV：−NT$${Math.abs(Math.round(res.negPV)).toLocaleString()}`;
   if (Math.abs(res.extraPV) > 0) interp += `\n情境：納入未列入主計算的成果後 SROI ＝ ${res.sroiAll.toFixed(2)} : 1`;
   if (warnings.length) interp += '\n\n⚠ 數據警示：\n· ' + warnings.join('\n· ');
   document.getElementById('resultInterp').textContent = interp;
@@ -1333,9 +1333,7 @@ function loadExample() {
 }
 
 function fmt(n) {
-  if (n >= 1e8) return (n / 1e8).toFixed(1) + '億';
-  if (n >= 10000) return Math.round(n / 10000) + '萬';
-  return n.toLocaleString();
+  return Math.round(n).toLocaleString('zh-TW');
 }
 
 // ─────────────────────────────────
